@@ -107,6 +107,23 @@ const BenchmarkMetricRegex = {
             },
         }
     },
+    LibertySUFP: {
+        outerRegex: /Warm run \d*([\s\S\n]*)/,
+        metrics: { 
+            "Footprint in kb":{
+                //Example: Footprint (kb)=168940
+                regex: /Footprint \(kb\)=(\d*\.?\d*)/,
+                higherbetter: false,
+                units: "kb",
+            },
+            "Startup time in ms":{
+                //Example: Startup time: 7828
+                regex: /Startup time: (\d*\.?\d*)/,
+                higherbetter: false,
+                units: "ms",
+            },
+        }
+    },
     renaissance: {
         metrics: { 
             "Response Time":{
