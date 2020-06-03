@@ -122,6 +122,12 @@ const BenchmarkMetricRegex = {
                 higherbetter: false,
                 units: "ms",
             },
+            "First Response in ms":{
+                //Example: First Response: 1523
+                regex: /First Response: (\d*\.?\d*)/,
+                higherbetter: false,
+                units: "ms",
+            }
         }
     },
     renaissance: {
