@@ -139,6 +139,7 @@ class DataManager {
         const { url, buildName, buildNum } = data;
         const testResults = new TestResultsDB();
         const result = await testResults.getData( { url, buildName, buildNum } ).toArray();
+        console.log("Hello");
         if ( result && result.length === 0 ) {
             const status = await testResults.populateDB( data );
             if ( status && status.insertedCount === 1 ) {

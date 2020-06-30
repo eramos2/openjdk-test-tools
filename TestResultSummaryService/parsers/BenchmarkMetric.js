@@ -127,6 +127,12 @@ const BenchmarkMetricRegex = {
                 regex: /First Response: (\d*\.?\d*)/,
                 higherbetter: false,
                 units: "ms",
+            },
+            "CPU Usage in secs":{
+                //Example: First Response: 1523
+                regex: /CPU:.*:(\d*\.?\d*)/,
+                higherbetter: false,
+                units: "s",
             }
         }
     },

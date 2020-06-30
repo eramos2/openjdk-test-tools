@@ -9,7 +9,7 @@ export default class ExtractRelevantJenkinsTestResults {
 
         let parsedVariantsCommon = {};
         let curVariantObjectId = null;
-        const {jdkDate, machine, aggregateInfo} = this.runJSON.testInfo[0];
+        const {jdkDate, machine, libertyBuild, javaBuild, aggregateInfo} = this.runJSON.testInfo[0];
         if (Array.isArray(aggregateInfo) && aggregateInfo.length > 0 ) {
             for (let {benchmarkName, benchmarkVariant, metrics} of aggregateInfo) {
                 if (benchmarkName && benchmarkVariant) {
@@ -19,6 +19,8 @@ export default class ExtractRelevantJenkinsTestResults {
                 if (!parsedVariantsCommon[curVariantObjectId]) {
                     parsedVariantsCommon[curVariantObjectId] = {
                         jdkDate,
+                        libertyBuild,
+                        javaBuild,
                         benchmarkName,
                         benchmarkVariant,
                         machine,

@@ -9,8 +9,9 @@ class Parser {
         const javaVersionRegex = /(((openjdk|java) version[\s\S]*?)(JCL.*)|((openjdk|java) version[\s\S]*?)(Server VM.*))/;
         const javaBuildDateRegex = /\s([0-9]{4})(0[1-9]|1[012])(0[1-9]|[12][0-9]|3[01])/;
         const sdkResourceRegex = /.*?SDK_RESOURCE\=(.*)[\r\n]/;
+        const javaBuildRegex = /\(((build.*) - (.*-.*))\)/;
         let curRegexResult = null;
-        let javaVersion, jdkDate, sdkResource;
+        let javaVersion, jdkDate, sdkResource, javaBuild;
         if ( ( curRegexResult = javaVersionRegex.exec( output ) ) !== null ) {
             javaVersion = curRegexResult[1];
         }
@@ -23,7 +24,11 @@ class Parser {
         if ( ( curRegexResult = javaBuildDateRegex.exec( javaVersion ) ) !== null ) {
             jdkDate = curRegexResult[0];
         }
-        return { javaVersion, jdkDate, sdkResource };
+        // parse jdk build from javaVersion
+        if ( ( curRegexResult = javaBuildRegex.exec( javaVersion ) ) !== null ) {
+            javaBuild = curRegexResult[3];
+        }
+        return { javaVersion, jdkDate, sdkResource, javaBuild };
     }
 
     exactNodeVersion(output) {
@@ -42,6 +47,20 @@ class Parser {
             nodeRunDate = curRegexResult[1];
         }
         return { nodeVersion, nodeRunDate };
+    }
+    
+    extractLibertyVersion(output) {
+        const libertyVersionRegex = /(Open Liberty|WebSphere Application Server) .* \(.*(cl\d*-\d*)/;
+        let curRegexResult = null;
+        let libertyVersion, libertyBuild;
+        // parse liberty version and build
+        // Example: From -> WebSphere Application Server 20.0.0.7 (1.0.42.cl200720200610-1100) on IBM J9 VM, version 8.0.6.7 - pxa6480sr6fp7-20200312_01(SR6 FP7) (en_US)
+        // Gets -> [1] = WebSphere Application Server [2] = cl200720200610-1100
+        if ( ( curRegexResult = libertyVersionRegex.exec( output ) ) !== null ) {
+            libertyVersion = curRegexResult[1];
+            libertyBuild = curRegexResult[2];
+        }
+        return { libertyVersion, libertyBuild };
     }
 
     extractArtifact( output ) {

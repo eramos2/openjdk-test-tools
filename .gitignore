@@ -3,3 +3,7 @@
 .settings
 .DS_Store
 .gradle/
+TestResultSummaryService/package-lock.json
+test-result-summary-client/package-lock.json
+test-result-summary-client/package-lock.json
+TestResultSummaryService/package-lock.json

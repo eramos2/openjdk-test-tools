@@ -368,7 +368,7 @@ export default class PerfCompare extends Component {
             }
         )
         let curAllVariantData = [];
-
+        console.log(this.state);
         // Only compare variants that are in the baseline run
         for (let i = 0; i < this.state.benchmarkRuns.benchmarkRunBaseline.parsedVariants.length; i++) {
             // Must match the benchmark and variant names
@@ -383,10 +383,15 @@ export default class PerfCompare extends Component {
             }
 
             let curVariantData = {};
+            
             curVariantData["benchmark"] = parsedVariantsBaseline.benchmarkName;
             curVariantData["variant"] = parsedVariantsBaseline.benchmarkVariant;
+            curVariantData["baselineLibertyBuild"] = parsedVariantsBaseline.libertyBuild;
+            curVariantData["testLibertyBuild"] = parsedVariantsTest.libertyBuild;
             curVariantData["baselineJdkDate"] = parsedVariantsBaseline.jdkDate;
             curVariantData["testJdkDate"] = parsedVariantsTest.jdkDate;
+            curVariantData["baselineJavaBuild"] = parsedVariantsBaseline.javaBuild;
+            curVariantData["testJavaBuild"] = parsedVariantsTest.javaBuild;
             curVariantData["summary"] = "";
             curVariantData["baselineMachine"] = parsedVariantsBaseline.machine;
             curVariantData["testMachine"] = parsedVariantsTest.machine;
@@ -455,11 +460,15 @@ export default class PerfCompare extends Component {
 
                 // Reverse division if metric is not higher = better. This makes all differences above 100% an improvement.
                 // If a metric's higherbetter value is not found, defaults to higher = better.
-                const curDiff = curHigherBetter ? curTestScore / curBaselineScore : curBaselineScore / curTestScore;
+                //const curDiff = curHigherBetter ? curTestScore / curBaselineScore : curBaselineScore / curTestScore;
+                // Added for Regression Patrol's calculation of regression
+                const curDiff = curTestScore / curBaselineScore;
+                // Regression Patrol Threshold
+                const regressionThreshold = 0.03;
                 // Row colours based on improvement or regression
-                if (curDiff > 1) {
+                if ( (curHigherBetter && curDiff > 1 + regressionThreshold) || (!curHigherBetter && curDiff < 1 - regressionThreshold) ) {
                     curColor = 'improvement';
-                } else if (curDiff < 1) {
+                } else if ( (curHigherBetter && curDiff < 1 - regressionThreshold) || (!curHigherBetter && curDiff > 1 + regressionThreshold) ) {
                     curColor = 'regression';
                 } else {
                     curColor = 'nochange';
@@ -543,7 +552,7 @@ export default class PerfCompare extends Component {
                 baselineRunID = this.state.selectedRuns.baselineID;
                 testRunID = this.state.selectedRuns.testID;
             }
-
+            console.log(this.state.allVariantData);
             let generatedTables = this.state.allVariantData.map( (x,i) => 
                 <div key={i}>
                     <h3>
@@ -552,11 +561,15 @@ export default class PerfCompare extends Component {
                         Variant: {x.variant}
                     </h3>
 
-                    Baseline JDK Date: {x.baselineJdkDate} 
+                    Baseline Liberty Build: {x.baselineLibertyBuild} 
+                    <Divider type="vertical" />
+                    Baseline Java Build: {x.baselineJavaBuild} 
                     <Divider type="vertical" />
                     Baseline Machine: {x.baselineMachine}
                     <Divider type="vertical" />
-                    Test JDK Date: {x.testJdkDate}
+                    Test Liberty Build: {x.testLibertyBuild}
+                    <Divider type="vertical" />
+                    Test Java Build: {x.testJavaBuild}
                     <Divider type="vertical" />
                     Test Machine: {x.testMachine}<br />
                     
