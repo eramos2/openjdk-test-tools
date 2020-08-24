@@ -1,18 +1,20 @@
 import React, { Component } from 'react';
-import { Form, Input, Button, Radio, Row, Table, Divider, Progress, Alert } from 'antd';
+import { Form, Input, Button, Radio, Row, Table, Divider, Progress, Alert, Select } from 'antd';
 import math from 'mathjs';
 import { stringify } from 'qs';
 import PerffarmRunJSON from './lib/PerffarmRunJSON';
 import ExtractRelevantJenkinsTestResults from './lib/ExtractRelevantJenkinsTestResults';
 import { getParams } from '../utils/query';
 import './PerfCompare.css';
-import { getBenchmarkMetricProps } from '../utils/perf';
+import { getBenchmarkMetricProps, getLibertyBuilds, getLibertyBuilLatestJob } from '../utils/perf';
 import { parseJenkinsUrl } from '../utils/parseJenkinsUrl';
 
 const buildTypeExampleURL = {
     Jenkins: "https://customJenkinsServer/view/PerfTests/job/Daily-Liberty-Startup/1/",
     Perffarm: "http://perffarmServer/build_info.php?build_id=212880"
 }
+
+const { Option } = Select;
 
 export default class PerfCompare extends Component {
     constructor(props) {
@@ -25,6 +27,9 @@ export default class PerfCompare extends Component {
             baselineID: "",
             testID: "",
         },
+        selectedLibertyBaselineBuild: "",
+        selectedLibertyTargetBuild: "",
+        libertyBuilds: [],
         selectedRuns: {
             baselineServerURL: "",
             testServerURL: "",
@@ -52,7 +57,39 @@ export default class PerfCompare extends Component {
         for (let url in urlData) {
         	inputURL[url] = urlData[url];
         }
-        await this.setState({inputURL: inputURL});
+        const libertyBuilds = await getLibertyBuilds();
+        
+        await this.setState({inputURL: inputURL, libertyBuilds: libertyBuilds.results});
+    }
+
+    async handleSelectLibertyBuild(target_or_baseline, libertyBuild) {
+        if(target_or_baseline == "baseline" ){
+            this.setState({selectedLibertyBaselineBuild: libertyBuild,})
+        } else if (target_or_baseline == "target" ){
+            this.setState({selectedLibertyTargetBuild: libertyBuild,})
+        } 
+        
+        const libertyBaselineBuildLatestJob = await getLibertyBuilLatestJob(libertyBuild);
+        let results = libertyBaselineBuildLatestJob.results;
+        let jobURL = results.url + '/' + results.buildName + '/' + results.buildNum + '/';
+        console.log(results);
+        console.log(jobURL);
+        if(target_or_baseline == "baseline" ){
+            await this.setState({inputURL: {baselineID: jobURL,testID: this.state.inputURL.testID,}})
+        } else if (target_or_baseline == "target" ){
+            await this.setState({inputURL: {baselineID: this.state.inputURL.baselineID,testID: jobURL,}})
+        } 
+        
+        console.log(this.state);
+    }
+
+    handleSelectTargetBuild(event) {
+        console.log(event);
+        this.setState(
+            {
+                 selectedLibertyTargetBuild: event,
+            }
+        )
     }
 
     handleChange(event) {
@@ -164,7 +201,7 @@ export default class PerfCompare extends Component {
             })
         })
     }
-
+    
     handleGetJenkinsRuns = async () => {
 
         this.setState(
@@ -174,7 +211,7 @@ export default class PerfCompare extends Component {
                 progressStatus: 'active'
             }
         )
-
+   
         const baselineBuildTestInfo = await fetch( `/api/getTestInfoByBuildInfo?url=${this.state.selectedRuns.baselineID[0]}&buildName=${this.state.selectedRuns.baselineID[1]}&buildNum=${this.state.selectedRuns.baselineID[2]}`, {
             method: 'get'
         } );
@@ -636,7 +673,11 @@ export default class PerfCompare extends Component {
             if (this.state.displayAlert.status) {
                 displayError = <div><Alert message={this.state.displayAlert.message} type="error" /><Divider /></div>;
             }
-
+            
+            let libertyBuildsExist = this.state.libertyBuilds.length > 0;
+            console.log(libertyBuildsExist);
+            console.log(this.state.libertyBuilds);
+            console.log(this.state.libertyBuilds.length);
             return <div>
                 {displayError}
                 <Radio.Group value={this.state.buildType} onChange={this.handleBuildTypeChange.bind(this)}>
@@ -645,6 +686,19 @@ export default class PerfCompare extends Component {
                 </Radio.Group>
                 <br />
                 <br />
+                <Select defaultValue="default" onChange={this.handleSelectLibertyBuild.bind(this, "baseline")}>
+                <Option value="default">Select a Baseline Build</Option>
+                    { libertyBuildsExist && this.state.libertyBuilds.map((build, index) => (<Option key={index} value={build._id} >{build._id}</Option>)) }
+                    
+                    
+                </Select>
+                <br />
+                <Select defaultValue="default" onChange={this.handleSelectLibertyBuild.bind(this, "target")}>
+                <Option value="default">Select a Target Build</Option>
+                    { libertyBuildsExist && this.state.libertyBuilds.map((build, index) => (<Option key={index} value={build._id} >{build._id}</Option>)) }
+                    
+                    
+                </Select>
                 <Form.Item label="Baseline Run ID" >
                     <Input placeholder={this.state.buildType + " URL. Ex: " + buildTypeExampleURL[this.state.buildType]} name="baselineID" value={this.state.inputURL.baselineID} onChange={this.handleChange.bind(this)} />
                 </Form.Item>

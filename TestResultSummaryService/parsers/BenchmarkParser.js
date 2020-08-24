@@ -88,13 +88,12 @@ class BenchmarkParser extends Parser {
         buildResult = Utils.perfBuildResult(tests);
         const { javaVersion, jdkDate, javaBuild } = this.exactJavaVersion( output );
         const { nodeVersion, nodeRunDate} = this.exactNodeVersion( output );
-        const { libertyVersion, libertyBuild } = this.extractLibertyVersion( output );
+        const { libertyBuild } = this.extractLibertyVersion( output );
         
         return {
             tests,
             jdkDate,
             javaVersion,
-            libertyVersion,
             libertyBuild,
             javaBuild,
             nodeRunDate,

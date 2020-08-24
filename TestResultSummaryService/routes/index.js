@@ -34,9 +34,15 @@ app.get( '/getTopLevelBuildNames', wrap( require( "./getTopLevelBuildNames" ) ) 
 app.get( '/getTotals', wrap( require( "./getTotals" ) ) );
 app.get( '/populateDB', wrap( require( "./populateDB" ) ) );
 app.get( '/updateComments', wrap( require( "./updateComments" ) ) );
+app.get( '/getLibertyBuilds', wrap( require( "./getLibertyBuilds.js" ) ) );
+app.get( '/getLibertyBuildLatestJob', wrap( require( "./getLibertyBuildLatestJob.js" ) ) );
+app.get( '/getLibertyGMBuildLatestJob', wrap( require( "./getLibertyGMBuildLatestJob.js" ) ) );
+app.get( '/getLibertyGMList', wrap( require( "./getLibertyGMList.js" ) ) );
 
 app.post( '/getParentSpecificData', wrap( require( "./getParentSpecificData" ) ) );
 app.post( '/getSpecificData', wrap( require( "./getSpecificData" ) ) );
 app.post( '/upsertBuildList', wrap( require( "./upsertBuildList" ) ) );
+
+
 
 module.exports = app;

@@ -6,6 +6,7 @@ import WidgetWrapper from './WidgetWrapper';
 import LocalStorage from '../utils/LocalStorage';
 import Defaults from "./Defaults";
 import "./dashboard.css";
+import { getLibertyGMBuildLatestJob } from '../utils/perf';
 const ReactGridLayout = WidthProvider( RGL );
 
 export default class TabInfo extends Component {
@@ -49,7 +50,24 @@ export default class TabInfo extends Component {
             } )
         }
     }
-    componentDidMount() {
+    async componentDidMount() {
+        console.log("INSIDE COMPONENT DID MOUNT");
+        console.log(this.state);
+        let settings = this.state.settings;
+        settings.map(async (setting, key) =>  {
+            if (setting != null && setting.type.includes("LibertySUFP")) {
+                console.log(setting);
+                console.log(key);
+                const response = await fetch(`/api/getLibertyGMList`, {
+                    method: 'get'
+                });
+                const results = await response.json();
+                console.log(results);
+                settings[key].libertyGMList = results;
+                console.log(settings);
+                this.setState( { settings: settings } );
+            }
+        })
         this.setState( { loaded: true } );
     }
 
@@ -70,6 +88,34 @@ export default class TabInfo extends Component {
     onChange = ( i, value ) => {
         this.state.settings[i] = { ...this.state.settings[i], ...value }
         this.setState( this.state );
+    }
+
+   onChangeLibertyBaselineRelease = async (i, value) => {
+        console.log(i);
+        console.log(value);
+        let libertyGMRelease = value;
+        let libertyBaselineBuildLatestJob = await getLibertyGMBuildLatestJob(libertyGMRelease);
+        console.log(libertyBaselineBuildLatestJob);
+        let settings = this.state.settings;
+        settings[i].libertyBaselineBuild = libertyBaselineBuildLatestJob.results.libertyBuild;
+        settings[i].libertyBaselineRelease = value;
+        this.setState({settings: settings});
+    }
+
+    onChangeLibertyTargetRelease = async(i, value) => {
+        console.log(i);
+        console.log(value);
+        let settings = this.state.settings;
+        if(value == "All"){
+            settings[i].libertyTargetBuild = value;
+        } else {
+            let libertyGMRelease = value;
+            let libertyTargetBuildLatestJob = await getLibertyGMBuildLatestJob(libertyGMRelease);
+            settings[i].libertyTargetBuild = libertyTargetBuildLatestJob.results.libertyBuild;
+            console.log(libertyTargetBuildLatestJob);
+        }
+        settings[i].libertyTargetRelease = value;
+        this.setState({settings: settings});
     }
 
     onAddWidget = e => {
@@ -118,7 +164,7 @@ export default class TabInfo extends Component {
                         const Widget = Widgets[setting.type];
                         if ( !Widget ) return <div key={item.i} />;
                         return <div key={item.i}>
-                            <WidgetWrapper Widget={Widget} {...setting} onRemove={this.onRemove.bind( null, item.i )} onChange={this.onChange.bind( null, item.i )} />
+                            <WidgetWrapper Widget={Widget} {...setting} onRemove={this.onRemove.bind( null, item.i )} onChange={this.onChange.bind( null, item.i )} onChangeLibertyBaselineRelease={this.onChangeLibertyBaselineRelease.bind(null, item.i )} onChangeLibertyTargetRelease={this.onChangeLibertyTargetRelease.bind(null, item.i )}/>
                         </div>
                     } )}
                 </ReactGridLayout>

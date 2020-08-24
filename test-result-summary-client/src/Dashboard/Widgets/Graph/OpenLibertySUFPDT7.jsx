@@ -1,8 +1,10 @@
 import React, { Component } from 'react';
+import Highcharts from "highcharts/highstock";
 import {
     HighchartsChart, Chart, XAxis, YAxis, Legend,
-    ColumnSeries, SplineSeries, Navigator, RangeSelector, Tooltip
+    ColumnSeries, LineSeries, AreaRangeSeries, SplineSeries, Navigator, RangeSelector, Tooltip
 } from 'react-jsx-highstock';
+import addHighchartsMore from 'highcharts/highcharts-more';
 import DateRangePickers from '../DateRangePickers';
 import { Checkbox } from 'antd';
 import BenchmarkMath from '../../../PerfCompare/lib/BenchmarkMath';
@@ -10,15 +12,17 @@ import math from 'mathjs';
 import utils from './utils';
 import { getTwoToneColor } from 'antd/lib/icon/twoTonePrimaryColor';
 
+addHighchartsMore(Highcharts);
+
 const map = {
     "OpenLibertySUFPDT7": "Test_openjdk8_j9_extended.perf_x86-64_linux",
 };
 
 let display = {
-    "Daytrader7": true,
+    "OpenLibertySUFPDT7": true,
 };
 
-export class Daytrader7Setting extends Component {
+export class OpenLibertySUFPDT7Setting extends Component {
     onChange = obj => {
         for (let i in display) {
             display[i] = false;
@@ -31,7 +35,7 @@ export class Daytrader7Setting extends Component {
 
     render() {
         return <div style={{ maxWidth: 400 }}>
-            <Checkbox.Group onChange={this.onChange} values={map.keys} defaultValue={["Daytrader7"]}>
+            <Checkbox.Group onChange={this.onChange} values={map.keys} defaultValue={["OpenLibertySUFPDT7"]}>
                 {Object.keys(map).map(key => {
                     return <Checkbox key={key} value={key} checked={false}>{map[key]}</Checkbox>;
                 })}
@@ -40,14 +44,14 @@ export class Daytrader7Setting extends Component {
     }
 }
 
-export default class Daytrader7 extends Component {
+export default class OpenLibertySUFPDT7 extends Component {
     constructor (props) {
         super(props);
-        this.handleClick = this.handleClick.bind(this);
+        
     }
     static Title = props => props.buildSelected || '';
     static defaultSize = { w: 2, h: 4 }
-    static Setting = Daytrader7Setting;
+    static Setting = OpenLibertySUFPDT7Setting;
     static defaultSettings = {
         buildSelected: Object.keys(map)[0]
     }
@@ -56,6 +60,8 @@ export default class Daytrader7 extends Component {
     state = {
         displaySeries: [],
         baselineSeries: [],
+        baselineThresholdAreaRange: [],
+        selectedMetric: "footprintMean"
     };
 
     async componentDidMount() {
@@ -72,7 +78,7 @@ export default class Daytrader7 extends Component {
     async updateData() {
         const { buildSelected } = this.props;
         const buildName = encodeURIComponent(map[buildSelected]);
-        const response = await fetch(`/api/getBuildHistory?type=Perf&buildName=${buildName}&status=Done&limit=100&asc`, {
+        const response = await fetch(`/api/getBuildHistory?type=Perf&buildName=${buildName}&status=Done&limit=100&asc=true`, {
             method: 'get'
         });
         const results = await response.json();
@@ -199,11 +205,15 @@ export default class Daytrader7 extends Component {
         const displaySeries = [];
         for ( let key in series ) {
             displaySeries.push( {
-                visible: key === "footprintMean",
+                //Set First object to be visible
+                //visible: key === Object.keys(series)[0],
                 name: key,
                 data: series[key],
                 keys: ['x3', 'y', 'additionalData', 'CI']
             } );
+            // if (key == "footprintMean" ){
+            //     this.setState({selectedMetric: key });
+            // }
         }
         this.setState( { displaySeries } );
     }
@@ -251,21 +261,50 @@ export default class Daytrader7 extends Component {
             return `${this.series.name}: ${this.y}<br/> Build: ${x.toISOString().slice( 0, 10 )}<br /> ${CIstr}`;
         }
     }
-    handleClick (e) {
-        console.log(e);
-        this.setState({baselineSeries: [e.point.y]});
+    calculateBaselineArea (data, dataLength) {
+        let baselineValue = [data[1]];
+        let baselineThresholdAreaRange= [];
+        baselineThresholdAreaRange.push([0,baselineValue*0.97,baselineValue*1.03]);
+        baselineThresholdAreaRange.push([dataLength-1,baselineValue*0.97,baselineValue*1.03]);
+        
+        return baselineThresholdAreaRange;
+        //this.setState({baselineSeries: baselineValue, baselineThresholdAreaRange: baselineThresholdAreaRange});
+    }
+
+    handleLegendClick(e){
+        console.log(e.target.name);
+        let clickedMetric = e.target.name;
+        this.setState({selectedMetric: clickedMetric});
     }
     render() {
         const { displaySeries, baselineSeries } = this.state;
+        const { libertyBaselineBuild, libertyTargetBuild } = this.props;
+        let { selectedMetric } = this.state;
         //console.log(displaySeries);
         //console.log(baselineSeries);
         //Add if statement 
-        let categories;
-        if (displaySeries[0] != undefined && displaySeries[0].hasOwnProperty('data')){
-            categories = displaySeries[0].data.map(s => {return s[0]});
+        let categories = [];
+        if (displaySeries[0] != undefined && libertyTargetBuild != null && displaySeries[0].hasOwnProperty('data')){
+            console.log(libertyTargetBuild);
+            if (libertyTargetBuild == "All"){
+                categories = displaySeries[0].data.map(build => {
+                    console.log(build);
+                    return build[0];
+                });
+
+            } else {
+                categories = displaySeries[0].data.filter(build => {
+                
+                    return build[0].toString().slice(0,4) == libertyTargetBuild.slice(2, 6);
+          
+        })   
+              categories = categories.map(build => {return build[0]});
+              
+            }
+            categories.sort((a,b) => a-b);
+            }
             //console.log(categories);
-        } 
-        
+        console.log(categories);
         const plotOptions = {
             cursor: 'pointer',
             events: {
@@ -275,6 +314,14 @@ export default class Daytrader7 extends Component {
                     console.log("Hello");
                 } 
             },
+            area: {
+                stacking: 'normal'
+            },
+            arearange: {
+                color: 'green',
+                opacity: .25,
+                showInLegend: false
+            },
             column: {
               pointPadding: 0.2,
               borderWidth: 0
@@ -283,6 +330,31 @@ export default class Daytrader7 extends Component {
                 lineWidth: 4
             }
           };
+
+          let filteredSeries = [];
+          console.log(libertyBaselineBuild.slice(2).replace('-',''));
+          //let selectedMetric = "footprintMean";
+          console.log(selectedMetric);
+          let selectedMetricData = displaySeries.filter(metric =>  metric.name == selectedMetric);
+          let selectedMetricBaselineData = selectedMetricData[0] != undefined ? selectedMetricData[0].data.filter(build => build[0] == libertyBaselineBuild.slice(2).replace('-','')) : undefined;
+          console.log(selectedMetricBaselineData);
+          //if (selectedMetricBaselineData != undefined) {
+            //this.calculateBaselineArea(selectedMetricBaselineData, categories.length);
+         // } 
+          
+          let showBaselineData = selectedMetricBaselineData != undefined;
+          console.log("baseline data", showBaselineData);
+          console.log(selectedMetricBaselineData);
+        //   displaySeries.map(s => {s.data.map(build => {
+        //     console.log(build[0].toString().includes("2006"));
+        //     console.log(libertyBaselineBuild);
+        //       if (libertyBaselineBuild != undefined && build[0].toString().includes(libertyBaselineBuild.slice(2, 6))){
+              
+        //       filteredSeries.push(build[0]);
+        //       }
+
+        //   })
+        // });
         return <HighchartsChart plotOptions={plotOptions}>
             {/* <Chart zoomType="x" height="50%" /> */}
             <Chart type="spline" />
@@ -294,11 +366,36 @@ export default class Daytrader7 extends Component {
                 <XAxis.Title>Build</XAxis.Title>
             </XAxis>
 
-            <YAxis id="gt" plotLines={this.state.baselineSeries.length === 1 ? [{color: 'red', width: 2, value: this.state.baselineSeries, dashStyle: 'longdashdot'}] : [{}]}>
-                <YAxis.Title>Footprint</YAxis.Title>
-                {displaySeries.map( s => {
-                    return <ColumnSeries {...s} id={s.name} key={s.name} onClick={this.handleClick}/>
+            <YAxis id="gt" plotLines={libertyBaselineBuild && showBaselineData &&  selectedMetricBaselineData.length != 0 ? [{color: 'red', width: 2, value: selectedMetricBaselineData[0][1], dashStyle: 'longdashdot'}] : [{}]}>
+        <YAxis.Title>{selectedMetric}</YAxis.Title>
+                {libertyTargetBuild && displaySeries.map( s => {
+                    let series = s;
+                    console.log(s);
+                    console.log(libertyTargetBuild);
+                    // let data = series.data.filter(build => {
+                    //     if (build[0].toString().slice(0,4) == libertyTargetBuild.slice(2, 6)){
+              
+                    //         return build;
+                    //     } 
+                    // })
+                    // series.data = data;
+                    console.log(libertyTargetBuild == "All" ? s.data : s.data.filter(build => {
+                        if (build[0].toString().slice(0,4) == libertyTargetBuild.slice(2, 6)){
+                            console.log(build);
+                            return build;
+                        } 
+                    }))
+                    return <LineSeries {...s} data={libertyTargetBuild == "All" ? s.data : s.data.filter(build => {
+                        if (build[0].toString().slice(0,4) == libertyTargetBuild.slice(2, 6)){
+                            console.log(build);
+                            return build;
+                        } 
+                    // })} id={s.name} key={s.name} onClick={this.handleClick}/>
+                })} id={s.name} key={s.name} visible={selectedMetric == s.name ? true : false} onShow={(e) => {this.setState({selectedMetric: s.name}); console.log(this.state); console.log(e.target.name) }}  />
+
                 } )}
+                
+                {libertyBaselineBuild && showBaselineData && selectedMetricBaselineData.length != 0 && <AreaRangeSeries name="test" data={this.calculateBaselineArea(selectedMetricBaselineData[0], categories.length)}/>}
                 {/* <ColumnSeries name="Installation" data={[1, 2, 3]} />
                 <ColumnSeries name="footprint" data={[3, 2, 1]} />
                 <ColumnSeries name="startup" data={[1, 3, 2]} /> */}
@@ -312,10 +409,10 @@ export default class Daytrader7 extends Component {
                 <RangeSelector.Button type="all">All</RangeSelector.Button>
             </RangeSelector> */}
 
-            <Navigator>
+            {/* <Navigator>
                 <Navigator.Series seriesId="activeMax" />
                 <Navigator.Series seriesId="mean" />
-            </Navigator>
+            </Navigator> */}
         </HighchartsChart>
     }
 }

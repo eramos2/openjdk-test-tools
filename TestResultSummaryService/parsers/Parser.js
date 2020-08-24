@@ -52,15 +52,14 @@ class Parser {
     extractLibertyVersion(output) {
         const libertyVersionRegex = /(Open Liberty|WebSphere Application Server) .* \(.*(cl\d*-\d*)/;
         let curRegexResult = null;
-        let libertyVersion, libertyBuild;
+        let libertyBuild;
         // parse liberty version and build
         // Example: From -> WebSphere Application Server 20.0.0.7 (1.0.42.cl200720200610-1100) on IBM J9 VM, version 8.0.6.7 - pxa6480sr6fp7-20200312_01(SR6 FP7) (en_US)
         // Gets -> [1] = WebSphere Application Server [2] = cl200720200610-1100
         if ( ( curRegexResult = libertyVersionRegex.exec( output ) ) !== null ) {
-            libertyVersion = curRegexResult[1];
             libertyBuild = curRegexResult[2];
         }
-        return { libertyVersion, libertyBuild };
+        return { libertyBuild };
     }
 
     extractArtifact( output ) {

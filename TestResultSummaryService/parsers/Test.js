@@ -16,11 +16,10 @@ class Test extends Parser {
     async parse(output) {
         const tests = await this.extract(output);
         const {javaVersion, jdkDate, sdkResource, javaBuild} = this.exactJavaVersion(output);
-        const {libertyVersion, libertyBuild} = this.extractLibertyVersion(output);
+        const {libertyBuild} = this.extractLibertyVersion(output);
         tests.javaVersion = javaVersion;
         tests.jdkDate = jdkDate;
         tests.sdkResource = sdkResource;
-        tests.libertyVersion = libertyVersion;
         tests.libertyBuild = libertyBuild;
         tests.javaBuild = javaBuild;
         tests.machine = this.extractMachineInfo(output);
