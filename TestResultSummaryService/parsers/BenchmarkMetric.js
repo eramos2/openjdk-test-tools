@@ -116,6 +116,12 @@ const BenchmarkMetricRegex = {
                 higherbetter: false,
                 units: "kb",
             },
+            "Footprint in mb":{
+                //Example: Footprint (kb)=168940
+                regex: /Footprint \(mb\)=(\d*\.?\d*)/,
+                higherbetter: false,
+                units: "mb",
+            },
             "Startup time in ms":{
                 //Example: Startup time: 7828
                 regex: /Startup time: (\d*\.?\d*)/,
