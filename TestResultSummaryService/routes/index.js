@@ -38,6 +38,7 @@ app.get( '/getLibertyBuilds', wrap( require( "./getLibertyBuilds.js" ) ) );
 app.get( '/getLibertyBuildLatestJob', wrap( require( "./getLibertyBuildLatestJob.js" ) ) );
 app.get( '/getLibertyGMBuildLatestJob', wrap( require( "./getLibertyGMBuildLatestJob.js" ) ) );
 app.get( '/getLibertyGMList', wrap( require( "./getLibertyGMList.js" ) ) );
+app.get( '/getLibertyScenarios', wrap( require( "./getLibertyScenarios.js" ) ) );
 
 app.post( '/getParentSpecificData', wrap( require( "./getParentSpecificData" ) ) );
 app.post( '/getSpecificData', wrap( require( "./getSpecificData" ) ) );

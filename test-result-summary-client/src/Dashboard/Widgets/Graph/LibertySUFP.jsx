@@ -15,14 +15,14 @@ import { getTwoToneColor } from 'antd/lib/icon/twoTonePrimaryColor';
 addHighchartsMore(Highcharts);
 
 const map = {
-    "OpenLibertySUFPDT7": "Test_openjdk8_j9_extended.perf_x86-64_linux",
+    "LibertySUFP": "Test_openjdk8_j9_extended.perf_x86-64_linux",
 };
 
 let display = {
-    "OpenLibertySUFPDT7": true,
+    "LibertySUFP": true,
 };
 
-export class OpenLibertySUFPDT7Setting extends Component {
+export class LibertySUFPSetting extends Component {
     onChange = obj => {
         for (let i in display) {
             display[i] = false;
@@ -44,16 +44,19 @@ export class OpenLibertySUFPDT7Setting extends Component {
     }
 }
 
-export default class OpenLibertySUFPDT7 extends Component {
+export default class LibertySUFP extends Component {
     constructor (props) {
         super(props);
-        console.log(props);
+        //console.log(props);
     }
-    static Title = props => props.buildSelected || '';
+    
+    static Title = props => {
+        return props.buildSelected || ''
+    };
     static defaultSize = { w: 2, h: 4 }
-    static Setting = OpenLibertySUFPDT7Setting;
+    static Setting = LibertySUFPSetting;
     static defaultSettings = {
-        buildSelected: Object.keys(map)[0]
+        buildSelected: props => props.buildSelected || ''
     }
     
 
@@ -76,8 +79,9 @@ export default class OpenLibertySUFPDT7 extends Component {
     }
 
     async updateData() {
-        const { buildSelected } = this.props;
-        const buildName = encodeURIComponent(map[buildSelected]);
+        const { buildSelected, type } = this.props;
+        //console.log(buildSelected);
+        const buildName = encodeURIComponent(map[type]);
         const response = await fetch(`/api/getBuildHistory?type=Perf&buildName=${buildName}&status=Done&limit=100&asc=true`, {
             method: 'get'
         });
@@ -93,13 +97,13 @@ export default class OpenLibertySUFPDT7 extends Component {
         let firstResponseMean = [];
         let cpuUsageMean = [];
         let median = [];
-        console.log("results", results);
+        //console.log("results", results);
         // combine results having the same JDK build date
         results.forEach(( t, i ) => {
             // Get builds that completed and that have liberty builds that start with 'cl'
             if ( t.buildResult !== "SUCCESS" || t.libertyBuild == null ) return;
             if ( !t.libertyBuild.startsWith("cl") ) return;
-            console.log(t);
+            //console.log(t);
             const jdkDate = t.jdkDate;
             // Get the build without the cl
             const libertyBuildSplit = t.libertyBuild.split(/cl|-/); 
@@ -110,8 +114,8 @@ export default class OpenLibertySUFPDT7 extends Component {
             resultsByLibertyBuild[libertyBuildNumber] = resultsByLibertyBuild[libertyBuildNumber] || [];
             resultsByJDKBuild[jdkDate] = resultsByJDKBuild[jdkDate] || [];
             t.tests.forEach(( test, i ) => {
-                if ( !test.testName.startsWith("OpenLibertySUFPDT7") || !test.testData || !test.testData.metrics ) return;
-                console.log(test.testName);
+                if ( !test.testName.startsWith(buildSelected) || !test.testData || !test.testData.metrics ) return;
+                //console.log(test.testName);
                 //const libertyBuildJobKey = libertyBuildNumber + '' + timestamp;
                 //resultsByLibertyBuild[libertyBuildJobKey] = resultsByLibertyBuild[libertyBuildJobKey] || [];
                 //console.log(libertyBuildJobKey);
@@ -122,25 +126,31 @@ export default class OpenLibertySUFPDT7 extends Component {
                  test.testData.metrics.forEach((metric, j) => {
                      //console.log(metric);
                      //console.log(j);
+                     let value;
+                     if (metric.value[0] != null){
+                        value = math.mean(metric.value);
+                     } else {
+                         value = null;
+                     }
                      //console.log(math.mean(metric.value));
                      switch (metric.name) {
                         case 'Footprint in kb':
-                            footprint = math.mean(metric.value);
+                            footprint = value;
                             break;
                         case 'Startup time in ms':
-                            startup = math.mean(metric.value);
+                            startup = value;
                             break;
                         case 'First Response in ms':
-                            firstResponse = math.mean(metric.value);
+                            firstResponse = value;
                             break;
                         case 'CPU Usage in secs':
-                            cpuUsage = math.mean(metric.value);
+                            cpuUsage = value;
                             break;
                         default:
                             return;
                      }
                  });
-                 console.log(metrics);
+                 //console.log(metrics);
                 //if (metrics.name !== "Footprint in kb" ) return;
                 resultsByJDKBuild[jdkDate].push( {
                     activeMax: metrics.value[0],
@@ -169,10 +179,10 @@ export default class OpenLibertySUFPDT7 extends Component {
                 //console.log(resultsByLibertyBuild);
             });
         } );
-        console.log(resultsByLibertyBuild);
+        //console.log(resultsByLibertyBuild);
         //console.log(math.sort(Object.keys( resultsByLibertyBuild )));
         math.sort( Object.keys( resultsByLibertyBuild ) ).forEach(( k, i ) => {
-        console.log(resultsByLibertyBuild[k]);
+        //console.log(resultsByLibertyBuild[k]);
         //Get results for latest ran job with 'k' build numnber
         let latestRanBuild = resultsByLibertyBuild[k].reduce((total, currentValue) => {
             if (currentValue.additionalData.timestamp > total.additionalData.timestamp){
@@ -198,10 +208,10 @@ export default class OpenLibertySUFPDT7 extends Component {
             //mean.push( [Number( resultsByLibertyBuild[k].additionalData.libertyBuildNumber ), math.mean( gtValues )] );
             //median.push( [Number( k ), math.median( gtValues )] );
         } );
-        console.log(footprintMean);
+        //console.log(footprintMean);
         //const series = { activeMax, std, mean, median };
         const series = { footprintMean, startupMean, firstResponseMean, cpuUsageMean };
-        console.log(series);
+        //console.log(series);
         const displaySeries = [];
         for ( let key in series ) {
             displaySeries.push( {
@@ -220,8 +230,8 @@ export default class OpenLibertySUFPDT7 extends Component {
 
     formatter = function() {
         const x = new Date( this.x );
-        console.log("Hello");
-        console.log(this.point);
+        //console.log("Hello");
+        //console.log(this.point);
         const CIstr = (typeof this.point.CI === 'undefined') ? ``: `CI = ${this.point.CI}`;
         if ( this.point.additionalData ) {
             let buildLinks = '';
@@ -239,13 +249,13 @@ export default class OpenLibertySUFPDT7 extends Component {
             let prevJavaVersion = prevPoint ? prevPoint.additionalData[lengthPrev - 1].javaVersion : null;
             let libertyBuildNumber = this.point.additionalData[lengthThis - 1].libertyBuildNumber;
             let prevLibertyBuildNumber= prevPoint ? prevPoint.additionalData[lengthPrev - 1].libertyBuildNumber : null;
-            console.log(this.point.additionalData[lengthThis - 1]);
-            console.log(this.x);
-            console.log(this.y);
-            console.log(this.series);
-            console.log(prevLibertyBuildNumber);
-            console.log("libNum");
-            console.log(libertyBuildNumber);
+            // console.log(this.point.additionalData[lengthThis - 1]);
+            // console.log(this.x);
+            // console.log(this.y);
+            // console.log(this.series);
+            // console.log(prevLibertyBuildNumber);
+            // console.log("libNum");
+            // console.log(libertyBuildNumber);
             let ranDate = new Date(this.point.additionalData[lengthThis - 1].timestamp);
             //let ret = `${this.series.name}: ${this.y}<br/> Build: ${x.toISOString().slice( 0, 10 )} <pre>${javaVersion}</pre><br/>Link to builds: ${buildLinks}<br /> ${CIstr}`;
             let ret = `${this.series.name}: ${this.y}<br/> Job Date: ${ranDate}<br/> Build: cl${this.x} <pre>${javaVersion}</pre><br/>Link to builds: ${buildLinks}<br /> ${CIstr}`;
@@ -272,7 +282,7 @@ export default class OpenLibertySUFPDT7 extends Component {
     }
 
     handleLegendClick(e){
-        console.log(e.target.name);
+        //console.log(e.target.name);
         let clickedMetric = e.target.name;
         this.setState({selectedMetric: clickedMetric});
     }
@@ -283,12 +293,13 @@ export default class OpenLibertySUFPDT7 extends Component {
         //console.log(displaySeries);
         //console.log(baselineSeries);
         //Add if statement 
+        //console.log(libertyTargetBuild);
         let categories = [];
         if (displaySeries[0] != undefined && libertyTargetBuild != null && displaySeries[0].hasOwnProperty('data')){
-            console.log(libertyTargetBuild);
+            //console.log(libertyTargetBuild);
             if (libertyTargetBuild == "All"){
                 categories = displaySeries[0].data.map(build => {
-                    console.log(build);
+                    //console.log(build);
                     return build[0];
                 });
 
@@ -304,14 +315,14 @@ export default class OpenLibertySUFPDT7 extends Component {
             categories.sort((a,b) => a-b);
             }
             //console.log(categories);
-        console.log(categories);
+        //console.log(categories);
         const plotOptions = {
             cursor: 'pointer',
             events: {
                 click: function (event) {
-                    alert(this.name + ' ' +event.altKey);
-                    console.log(event);
-                    console.log("Hello");
+                    //alert(this.name + ' ' +event.altKey);
+                    //console.log(event);
+                    //console.log("Hello");
                 } 
             },
             area: {
@@ -334,17 +345,19 @@ export default class OpenLibertySUFPDT7 extends Component {
           let filteredSeries = [];
           //console.log(libertyBaselineBuild.slice(2).replace('-',''));
           //let selectedMetric = "footprintMean";
-          console.log(selectedMetric);
+          //console.log(selectedMetric);
+          //console.log(libertyBaselineBuild);
           let selectedMetricData = displaySeries.filter(metric =>  metric.name == selectedMetric);
+          //console.log(selectedMetricData);
           let selectedMetricBaselineData = selectedMetricData[0] != undefined && libertyBaselineBuild != undefined ? selectedMetricData[0].data.filter(build => build[0] == libertyBaselineBuild.slice(2).replace('-','')) : undefined;
-          console.log(selectedMetricBaselineData);
+          //console.log(selectedMetricBaselineData);
           //if (selectedMetricBaselineData != undefined) {
             //this.calculateBaselineArea(selectedMetricBaselineData, categories.length);
          // } 
           
           let showBaselineData = selectedMetricBaselineData != undefined;
-          console.log("baseline data", showBaselineData);
-          console.log(selectedMetricBaselineData);
+          //console.log("baseline data", showBaselineData);
+          //console.log(selectedMetricBaselineData);
         //   displaySeries.map(s => {s.data.map(build => {
         //     console.log(build[0].toString().includes("2006"));
         //     console.log(libertyBaselineBuild);
@@ -365,13 +378,16 @@ export default class OpenLibertySUFPDT7 extends Component {
             <XAxis categories={categories} >
                 <XAxis.Title>Build</XAxis.Title>
             </XAxis>
-
-            <YAxis id="gt" plotLines={libertyBaselineBuild && showBaselineData &&  selectedMetricBaselineData.length != 0 ? [{color: 'red', width: 2, value: selectedMetricBaselineData[0][1], dashStyle: 'longdashdot'}] : [{}]}>
+            
+            <YAxis id="gt" plotLines={showBaselineData && libertyBaselineBuild &&  selectedMetricBaselineData.length != 0 ? [{color: 'red', width: 2, value: selectedMetricBaselineData[0][1], dashStyle: 'longdashdot'}] : [{}]}>
         <YAxis.Title>{selectedMetric}</YAxis.Title>
+        {/* {console.log("333HELOAfdgsdf4334SDA")}
+        {console.log(libertyTargetBuild)}
+        {console.log(displaySeries)} */}
                 {libertyTargetBuild && displaySeries.map( s => {
                     let series = s;
-                    console.log(s);
-                    console.log(libertyTargetBuild);
+                    //console.log(s);
+                    //console.log(libertyTargetBuild);
                     // let data = series.data.filter(build => {
                     //     if (build[0].toString().slice(0,4) == libertyTargetBuild.slice(2, 6)){
               
@@ -379,22 +395,21 @@ export default class OpenLibertySUFPDT7 extends Component {
                     //     } 
                     // })
                     // series.data = data;
-                    console.log(libertyTargetBuild == "All" ? s.data : s.data.filter(build => {
-                        if (build[0].toString().slice(0,4) == libertyTargetBuild.slice(2, 6)){
-                            console.log(build);
-                            return build;
-                        } 
-                    }))
+                    // console.log(libertyTargetBuild == "All" ? s.data : s.data.filter(build => {
+                    //     if (build[0].toString().slice(0,4) == libertyTargetBuild.slice(2, 6)){
+                    //         //console.log(build);
+                    //         return build;
+                    //     } 
+                    // }))
                     return <LineSeries {...s} data={libertyTargetBuild == "All" ? s.data : s.data.filter(build => {
                         if (build[0].toString().slice(0,4) == libertyTargetBuild.slice(2, 6)){
-                            console.log(build);
+                            //console.log(build);
                             return build;
                         } 
                     // })} id={s.name} key={s.name} onClick={this.handleClick}/>
-                })} id={s.name} key={s.name} visible={selectedMetric == s.name ? true : false} onShow={(e) => {this.setState({selectedMetric: s.name}); console.log(this.state); console.log(e.target.name) }}  />
+                })} id={s.name} key={s.name} visible={selectedMetric == s.name ? true : false} onShow={(e) => {this.setState({selectedMetric: s.name}); }}  />
 
                 } )}
-                
                 {libertyBaselineBuild && showBaselineData && selectedMetricBaselineData.length != 0 && <AreaRangeSeries name="test" data={this.calculateBaselineArea(selectedMetricBaselineData[0], categories.length)}/>}
                 {/* <ColumnSeries name="Installation" data={[1, 2, 3]} />
                 <ColumnSeries name="footprint" data={[3, 2, 1]} />

@@ -30,7 +30,7 @@ export default {
             {
                 type: 'ODM',
                 x: 2,
-                y: 1
+                y: 2
             },
             {
                 type: 'SPECjbb2015',

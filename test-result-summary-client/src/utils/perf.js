@@ -35,3 +35,12 @@ export const getLibertyGMBuildLatestJob = async (libertyGMRelease) => {
     libertyGMBuildLatestJob = await libertyGMBuildLatestJob.json();
     return libertyGMBuildLatestJob;
 }
+
+export const getLibertyScenarios = async () => {
+    let libertyScenarios = await fetch( `/api/getLibertyScenarios`, {
+            method: 'get'
+        }
+    );
+    libertyScenarios = await libertyScenarios.json();
+    return libertyScenarios;
+}
