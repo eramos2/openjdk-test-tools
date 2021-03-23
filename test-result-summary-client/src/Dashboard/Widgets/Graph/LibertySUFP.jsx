@@ -10,7 +10,6 @@ import { Checkbox } from 'antd';
 import BenchmarkMath from '../../../PerfCompare/lib/BenchmarkMath';
 import math from 'mathjs';
 import { parseSha } from './utils';
-import { getTwoToneColor } from 'antd/lib/icon/twoTonePrimaryColor';
 
 addHighchartsMore(Highcharts);
 
