@@ -9,7 +9,7 @@ import DateRangePickers from '../DateRangePickers';
 import { Checkbox } from 'antd';
 import BenchmarkMath from '../../../PerfCompare/lib/BenchmarkMath';
 import math from 'mathjs';
-import utils from './utils';
+import { parseSha } from './utils';
 import { getTwoToneColor } from 'antd/lib/icon/twoTonePrimaryColor';
 
 addHighchartsMore(Highcharts);
@@ -259,8 +259,8 @@ export default class LibertySUFP extends Component {
             let ranDate = new Date(this.point.additionalData[lengthThis - 1].timestamp);
             //let ret = `${this.series.name}: ${this.y}<br/> Build: ${x.toISOString().slice( 0, 10 )} <pre>${javaVersion}</pre><br/>Link to builds: ${buildLinks}<br /> ${CIstr}`;
             let ret = `${this.series.name}: ${this.y}<br/> Job Date: ${ranDate}<br/> Build: cl${this.x} <pre>${javaVersion}</pre><br/>Link to builds: ${buildLinks}<br /> ${CIstr}`;
-            prevJavaVersion = utils.parseSha(prevJavaVersion, 'OpenJ9');
-            javaVersion = utils.parseSha(javaVersion, 'OpenJ9');
+            prevJavaVersion = parseSha(prevJavaVersion, 'OpenJ9');
+            javaVersion = parseSha(javaVersion, 'OpenJ9');
 
             if (prevLibertyBuildNumber && libertyBuildNumber) {
                 let githubLink = `<a href="https://github.com/eclipse/openj9/compare/${prevLibertyBuildNumber}…${libertyBuildNumber}">Github Link </a>`;
