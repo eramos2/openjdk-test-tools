@@ -1,5 +1,5 @@
 export default {
-    FVT: {
+    Custom: {
         widgets: [
             {
                 type: 'BuildStatus',
@@ -10,33 +10,19 @@ export default {
                     title: "https://ci.adoptopenjdk.net",
                 }
             },
-            {
-                type: 'BuildStatus',
-                x: 0,
-                y: 1,
-                settings: {
-                    serverSelected: 'CustomJenkins',
-                }
-            }
         ]
     },
     Perf: {
         widgets: [
             {
-                type: 'DayTrader7',
+                type: 'Dacapo',
                 x: 0,
-                y: 2
+                y: 0,
+                settings: {
+                    serverSelected: 'AdoptOpenJDK',
+                    buildSelected: 'dacapo-jdk8'
+                }
             },
-            {
-                type: 'ODM',
-                x: 2,
-                y: 2
-            },
-            {
-                type: 'SPECjbb2015',
-                x: 0,
-                y: 6
-            }
         ]
     }
 }

@@ -1,5 +1,7 @@
 import React, { Component } from 'react';
-import { Form, Input, Button, Radio, Row, Table, Divider, Progress, Alert, Select } from 'antd';
+import { Form } from '@ant-design/compatible';
+import '@ant-design/compatible/assets/index.css';
+import { Input, Button, Radio, Row, Table, Divider, Progress, Alert, Select } from 'antd';
 import math from 'mathjs';
 import { stringify } from 'qs';
 import PerffarmRunJSON from './lib/PerffarmRunJSON';
@@ -490,8 +492,7 @@ export default class PerfCompare extends Component {
                     metricProps = this.metricsProps[benchmark][curMetricName];
                 }
                 // get metric Properties (regex & higherbetter & units) using current benchmark information
-                const curMetricUnits = metricProps ? this.metricsProps.units : "";
- 
+                const curMetricUnits = metricProps && metricProps.units ? metricProps.units : ""; 
                 // Check if a higher value for this metric means a better score 
                 const curHigherBetter = !metricProps || metricProps.higherbetter !== false;
 

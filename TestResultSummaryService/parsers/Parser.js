@@ -1,3 +1,5 @@
+const {removeTimestamp} = require('../routes/utils/removeTimestamp');
+
 class Parser {
     constructor( buildName ) {
         this.buildName = buildName;
@@ -13,7 +15,7 @@ class Parser {
         let curRegexResult = null;
         let javaVersion, jdkDate, sdkResource, javaBuild;
         if ( ( curRegexResult = javaVersionRegex.exec( output ) ) !== null ) {
-            javaVersion = curRegexResult[1];
+            javaVersion = removeTimestamp(curRegexResult[1]);
         }
         curRegexResult = null;
         if ( ( curRegexResult = sdkResourceRegex.exec( output) ) != null) {
@@ -65,7 +67,7 @@ class Parser {
     extractArtifact( output ) {
         let m;
         let artifact = null;
-        const artifactRegex = /Deploying artifact: ?(.*?)[\r\n]/;
+        const artifactRegex = /Test output artifactory URL:'(.*?)'/;
         if ( ( m = artifactRegex.exec( output ) ) !== null ) {
             artifact = m[1].trim();
         }
@@ -80,6 +82,54 @@ class Parser {
             machine = m[1];
         }
         return machine;
+    }
+
+    extractRerunLink (output) {
+        let m;
+        let rerunLink = null;
+        const rerunLinkRegex = /Rerun in Grinder: (.*?)[\r\n]+/;
+        if ( ( m = rerunLinkRegex.exec( output ) ) !== null ) {
+            rerunLink = m[1];
+        }
+        return rerunLink;
+    }
+
+    extractSha (output) {
+        let m;
+        let releaseInfo = null;
+        let openjdkSha = null;
+        let openJ9Sha = null;
+        let omrSha = null;
+        let versions = {};
+
+        const releaseInfoRegex = /=RELEASE INFO BEGIN=\n[\s\S]*?SOURCE="(.*)"[\s\S]*?=RELEASE INFO END=/;
+        const generalOpenjdkShaRegex = /git:(.*)/;
+        const openjdkShaRegex = /OpenJDK:\s?([^\s\:]*)/;
+        const j9AndOmrShaRegex = /OpenJ9:\s?([^\s\:]*).*OMR:\s?([^\s\:]*)/;
+
+        if ( ( m = releaseInfoRegex.exec( output ) ) !== null ) {
+            releaseInfo = m[1];
+
+            if ( ( m = generalOpenjdkShaRegex.exec( releaseInfo ) ) !== null ) {
+                openjdkSha = m[1];
+            } else if ( ( m = openjdkShaRegex.exec( releaseInfo ) ) !== null ) {
+                openjdkSha = m[1];
+            }
+
+            if ( ( m = j9AndOmrShaRegex.exec( releaseInfo ) ) !== null ) {
+                openJ9Sha = m[1];
+                omrSha = m[2];
+            }
+        }
+        
+        if (openjdkSha) {
+            versions.openjdkSha = openjdkSha
+        }
+        if (openJ9Sha && omrSha) {
+            versions.openJ9Sha = openJ9Sha;
+            versions.omrSha = omrSha;
+          }
+        return versions;
     }
 
     extractTestSummary( output ) {
@@ -105,7 +155,7 @@ class Parser {
     extractStartedBy( output ) {
         let m;
         let user = null;
-        const userRegex = /Started by ?(.*?)[\r\n]/;
+        const userRegex = /Started by ?(.*?)[\r\n]+/;
         if ( ( m = userRegex.exec( output ) ) !== null ) {
             user = m[1];
         }

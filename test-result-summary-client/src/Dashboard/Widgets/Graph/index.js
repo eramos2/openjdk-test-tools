@@ -4,3 +4,4 @@ export { default as SPECjbb2015 } from "./SPECjbb2015";
 export { default as AcmeairNodejs} from "./AcmeairNodejs";
 export { default as OpenLibertySUFPDT7} from "./OpenLibertySUFPDT7";
 export { default as LibertySUFP} from "./LibertySUFP";
+export { default as Dacapo} from "./Dacapo";

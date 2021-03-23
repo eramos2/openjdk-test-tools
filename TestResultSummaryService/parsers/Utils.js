@@ -74,7 +74,7 @@ class Utils {
         let buildResult;
         if ((tests.map(x=>x.testResult).indexOf("PASSED") > -1)) {
             if ((tests.map(x=>x.testResult).indexOf("FAILED") > -1)) {
-                buildResult = "PARTIAL-SUCCESS";
+                buildResult = "UNSTABLE";
             } else {
                 buildResult = "SUCCESS";
             }
@@ -82,6 +82,16 @@ class Utils {
             buildResult = "FAILURE";
         }
         return buildResult;
+    }
+
+    static getInfoFromBuildName( buildName ) {
+        const regex = /^Test_openjdk(\w+)_(\w+)_(\w+).(.+?)_(.+?_.+?(_xl)?)(_.+)?$/i;
+        const tokens = buildName.match(regex);
+        if (Array.isArray(tokens) && tokens.length > 5) {
+            const [_, jdkVersion, jdkImpl, level, group, platform] = tokens;
+            return {jdkVersion, jdkImpl, level, group, platform};
+        }
+        return null;
     }
 }
 module.exports = Utils;

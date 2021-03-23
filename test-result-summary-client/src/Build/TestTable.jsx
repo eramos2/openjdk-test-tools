@@ -1,44 +1,20 @@
 import React, { Component } from 'react';
 import TextFilter from '../utils/TextFilter';
-import { Table, Tooltip, Icon } from 'antd';
+import { ClusterOutlined, GithubOutlined, HistoryOutlined, QuestionCircleOutlined } from '@ant-design/icons';
+import { Table, Tooltip, Divider } from 'antd';
 import { params } from '../utils/query';
 import { Link } from 'react-router-dom';
 import renderDuration from './Duration';
-import moment from 'moment';
-
-const DAY_FORMAT = 'MMM DD YYYY, hh:mm a';
 
 export default class TestTable extends Component {
     state = {
         filteredData: [],
-        buildData: undefined
     };
-
-
-    async componentDidMount() {
-        await this.updateData();
-    }
 
     async componentDidUpdate(prevProps) {
         if (prevProps.testData !== this.props.testData) {
             this.setState({
                 filteredData: this.props.testData,
-            });
-        }
-        if (prevProps.buildId !== this.props.buildId) {
-            await this.updateData();
-        }
-    }
-
-    async updateData() {
-        const { buildId } = this.props;
-        const fetchBuild = await fetch(`/api/getData?_id=${buildId} `, {
-            method: 'get'
-        });
-        const builds = await fetchBuild.json();
-        if (builds && builds.length === 1) {
-            this.setState({
-                buildData: builds[0]
             });
         }
     }
@@ -49,7 +25,7 @@ export default class TestTable extends Component {
 
     render() {
         const { title, testData, parents } = this.props;
-        const { filteredData, buildData } = this.state;
+        const { filteredData } = this.state;
         const renderResult = ({ testResult, testId }) => {
             return <div>
                 {testId ? <Link to={{ pathname: '/output/test', search: params({ id: testId }) }}
@@ -59,69 +35,43 @@ export default class TestTable extends Component {
             </div>;
         };
 
-        const renderAction = (value, row, index) => {
+        const renderAction = (value, row) => {
             const { testId } = value;
+            const { buildId } = row;
 
-            return <span>
-                <Link to={{ pathname: '/testPerPlatform', search: params({ testId }) }}>
-                    All Platforms
-                </Link>
-                <span className="ant-divider" />
-                <Link to={{ pathname: '/deepHistory', search: params({ testId }) }}>
-                    Deep History
-                </Link>
-                {possibleIssues(value)}
-                {gitIssue(row)}
-            </span>
+            return (
+                <span>
+                    <Link to={{ pathname: '/testPerPlatform', search: params({ testId }) }}>
+                        <Tooltip title="All Platforms"><ClusterOutlined /></Tooltip>
+                    </Link>
+                    <Divider type="vertical" />
+                    <Link to={{ pathname: '/deepHistory', search: params({ testId }) }}>
+                        <Tooltip title="Deep History"><HistoryOutlined /></Tooltip>
+                    </Link>
+                    {possibleIssues(row, value)}
+                    <Divider type="vertical" />
+                    <Link to={{ pathname: '/gitNewIssue', search: params({ testId, buildId }) }}>
+                        <Tooltip title="Create new issue at https://github.com/AdoptOpenJDK/openjdk-tests"> <GithubOutlined /></Tooltip>
+                    </Link>
+                </span>
+            );
         }
 
-        const possibleIssues = (value) => {
-            const { testName } = value;
+        const possibleIssues = (row, value) => {
+            const { testId, testName } = value;
+            const buildId = row.buildId;
 
-            if (buildData) {
-                const { buildName } = buildData;
-                let issueUrl = `https://github.com/AdoptOpenJDK/openjdk-tests/issues?utf8=%E2%9C%93&q=is%3Aissue+is%3Aopen+${testName}`;
-                if (buildName.includes('j9') || buildName.includes('ibm')) {
-                    issueUrl = `https://github.com/eclipse/openj9/issues?utf8=%E2%9C%93&q=is%3Aissue+is%3Aopen+${testName}`;
-                }
-                return <span>
-                    <span className="ant-divider" />
-                    <a href={issueUrl} target="_blank" rel="noopener noreferrer">Possible Issues</a>
-                    </span>;
+            if (row.buildName) {
+                const buildName = row.buildName;
+                return (
+                    <span>
+                        <Divider type="vertical" />
+                        <Link to={{ pathname: '/possibleIssues', search: params({ buildId, buildName, testId, testName }) }}>
+                            <Tooltip title="Possible Issues"><QuestionCircleOutlined /></Tooltip>
+                        </Link>
+                    </span>
+                );
             }
-        };
-
-        const gitIssue = (value) => {
-            if (!buildData) return;
-            const { key, testName, duration } = value;
-
-            let testResult = "N/A";
-            if (value && value[0]) {
-                testResult = value[0].testResult;
-            }
-            const { _id, buildName, buildUrl, machine, timestamp } = buildData;
-            const buildStartTime = moment(timestamp).format(DAY_FORMAT);
-
-            const title = `${testName} ${testResult} in ${buildName}`;
-            const nl = "\n";
-            const body = `**Test Info**${nl}`
-                + `Test Name: ${testName}${nl}`
-                + `Test Duration: ${renderDuration(duration)}${nl}`
-                + `Machine: ${machine}${nl}`
-                + `TRSS link for the test output: https://trss.adoptopenjdk.net/output/test${params({ id: key })}${nl}`
-                + `${nl}${nl}`
-                + `**Build Info**${nl}`
-                + `Build Name: ${buildName}${nl}`
-                + `Jenkins Build start time: ${buildStartTime}${nl}`
-                + `Jenkins Build URL: ${buildUrl}${nl}`
-                + `TRSS link for the build: https://trss.adoptopenjdk.net/allTestsInfo${params({ buildId: _id })}${nl}`;
-
-
-            const urlParams = params({ title, body });
-            return <span>
-                <span className="ant-divider" />
-                <Tooltip title="Create new issue at https://github.com/AdoptOpenJDK/openjdk-tests"><a href={`https://github.com/AdoptOpenJDK/openjdk-tests/issues/new${urlParams}`} target="_blank" rel="noopener noreferrer"><Icon type="github" /></a></Tooltip>
-                </span>;
         };
 
         let columns = [{
@@ -227,7 +177,7 @@ export default class TestTable extends Component {
                 dataSource={filteredData}
                 bordered
                 title={() => title}
-                pagination={{ pageSize: 50 }}
+                pagination={{ defaultPageSize: 50, pageSizeOptions: ['10', '20', '50', '100'], showSizeChanger: true }}
             />
         </div>
     }

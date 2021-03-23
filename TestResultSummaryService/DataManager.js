@@ -1,8 +1,9 @@
-const { TestResultsDB, OutputDB, AuditLogsDB } = require( './Database' );
+const { TestResultsDB, OutputDB, ApplicationTestsDB, AuditLogsDB } = require( './Database' );
 const ObjectID = require( 'mongodb' ).ObjectID;
 const Parsers = require( `./parsers/` );
 const DefaultParser = require( `./parsers/Default` );
 const { logger } = require( './Utils' );
+const Utils = require( './parsers/Utils' );
 
 class DataManager {
     findParserType( buildName, output ) {
@@ -43,14 +44,52 @@ class DataManager {
         } else {
             const status = await outputDB.populateDB( { output } );
             if ( status && status.insertedCount === 1 ) {
-                return status.insertedIds[0];
+                return status.insertedId;
             }
         }
         return -1;
     }
 
+    async updateApplicationTests( data ) {
+        const { testName, testData, buildName, timestamp, _id, ...newData } = data;
+        if ( testData && testData.externalTestExtraData ) {
+            const buildInfo = Utils.getInfoFromBuildName(buildName);
+            if ( buildInfo ) {
+                const appDB = new ApplicationTestsDB();
+                const { dockerOS, appVersion, appName, javaVersionOutput } = testData.externalTestExtraData;
+                const { jdkVersion, jdkImpl, platform } = buildInfo;
+                let query = {
+                    testName,
+                    jdkVersion,
+                    jdkImpl,
+                    jdkPlatform: platform,
+                    dockerOS,
+                    appVersion,
+                    appName,
+                };
+                const update = {
+                    testId: _id,
+                    timestamp,
+                    javaVersionOutput,
+                    buildName,
+                    ...newData
+                }
+                const existingData = await appDB.getData(query).toArray();
+                if ( existingData && existingData.length === 1 ) {
+                    if ( timestamp > existingData.timestamp ) {
+                        await appDB.update( { _id: existingData._id }, { $set: update } );
+                    }
+                } else if ( existingData && existingData.length > 1 ) {
+                    logger.error("Detected duplicated data in Application Tests DB:", existingData);
+                } else {
+                    await appDB.populateDB( { ...query, ...update });
+                }
+            }
+        }
+    }
+
     async updateBuild( data ) {
-        logger.verbose( "updateBuild", data );
+        logger.verbose("updateBuild", data.buildName, data.buildNum);
         const { _id, buildName, ...newData } = data;
         const criteria = { _id: new ObjectID( _id ) };
         const testResults = new TestResultsDB();
@@ -118,11 +157,13 @@ class DataManager {
                     // store output
                     testOutputId = await this.updateOutput( outputData );
                 }
-                return {
+                const rt = {
                     _id: new ObjectID(),
                     testOutputId,
                     ...test
                 };
+                await this.updateApplicationTests( { buildName, buildUrl: update.buildUrl, buildNum: update.buildNum, timestamp: update.timestamp, url: update.url, ...rt } );
+                return rt;
             } ) );
             update.tests = testsObj;
             update.hasChildren = false;
@@ -144,7 +185,7 @@ class DataManager {
             const status = await testResults.populateDB( data );
             if ( status && status.insertedCount === 1 ) {
                 logger.debug( "createBuild", data.buildName, data.buildNum );
-                return status.insertedIds[0];
+                return status.insertedId;
             }
             return -1;
         }

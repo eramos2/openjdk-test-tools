@@ -3,16 +3,23 @@ const regexRunningTest = /.*?Running test (.*?) \.\.\.\r?/;
 const regexFinishTime = /(.*?) Finish Time\: .* Epoch Time \(ms\)\: (\d+).*/;
 const regexStartTime = /(.*?) Start Time\: .* Epoch Time \(ms\)\: (\d+).*/;
 const TestBenchmarkParser = require( `./TestBenchmarkParser`);
+const ExternalTestParser = require( `./ExternalTestParser`);
+
 const Utils = require(`./Utils`);
 
 class Test extends Parser {
     static canParse(buildName, output) {
-        if (buildName.indexOf("Test-") === 0) {
-            return true;
+        if (output) {
+            if (buildName.indexOf("Test-") === 0) {
+                return true;
+            } else {
+                return output.includes("Running test ");
+            }
         } else {
-            return output.includes("Running test ");
+            return false;
         }
     }
+
     async parse(output) {
         const tests = await this.extract(output);
         const {javaVersion, jdkDate, sdkResource, javaBuild} = this.exactJavaVersion(output);
@@ -26,6 +33,8 @@ class Test extends Parser {
         tests.testSummary = this.extractTestSummary(output);
         tests.startBy = this.extractStartedBy(output);
         tests.artifactory = this.extractArtifact(output);
+        tests.rerunLink = this.extractRerunLink(output);
+        tests.versions = this.extractSha(output);
         return tests;
     }
 
@@ -36,7 +45,7 @@ class Test extends Parser {
         let results = [];
         const readline = require('readline');
         const stream = require('stream');
-        let buf = new Buffer(str);
+        let buf = Buffer.from(str);
         let bufferStream = new stream.PassThrough();
         bufferStream.end(buf);
         let rl = readline.createInterface({
@@ -80,7 +89,7 @@ class Test extends Parser {
                         testResult,
                         testData: null,
                         duration: (startTime && finishTime && finishTime - startTime > 0) ? finishTime - startTime : null,
-                        startTime
+                        startTime: parseInt(startTime)
                     });
                     testName = null;
                     testStr = null;
@@ -124,6 +133,11 @@ class Test extends Parser {
         if (isPerf) {
             results = TestBenchmarkParser.parsePerf(results);
             buildResult =  Utils.perfBuildResult(results);
+        }
+
+        const isExternal = ExternalTestParser.canParse(this.buildName);
+        if (isExternal) {
+            results = new ExternalTestParser().parseExternal(results);
         }
 
         return {

@@ -90,16 +90,17 @@ const BenchmarkMetricRegex = {
             },
         }
     },
-    LibertyStartup: {
+    "liberty-dt7-startup": {
+    	//Example: Warm run 0...
         outerRegex: /Warm run \d*([\s\S\n]*)/,
         metrics: { 
-            "Footprint in kb":{
+            "Footprint":{
                 //Example: Footprint (kb)=168940
                 regex: /Footprint \(kb\)=(\d*\.?\d*)/,
                 higherbetter: false,
                 units: "kb",
             },
-            "Startup time in ms":{
+            "Startup time":{
                 //Example: Startup time: 7828
                 regex: /Startup time: (\d*\.?\d*)/,
                 higherbetter: false,
@@ -168,6 +169,70 @@ const BenchmarkMetricRegex = {
             },
         }
     },
+	dacapo: {
+		metrics: {
+			"eclipse":{
+				// DaCapo 9.12-MR1 eclipse PASSED in 75075 msec
+				regex: /DaCapo.*eclipse\sPASSED\sin\s(\d*\.?\d*)\smsec/,
+				higherbetter: true,
+				units: "msec"
+			},
+			"h2":{
+				// DaCapo 9.12-MR1 h2 PASSED in 10295 msec
+				regex: /DaCapo.*h2\sPASSED\sin\s(\d*\.?\d*)\smsec/,
+				higherbetter: true,
+				units: "msec"
+			},
+			"lusearch-fix":{
+				// DaCapo 9.12-MR1 lusearch-fix PASSED in 2597 msec
+				regex: /DaCapo.*lusearch-fix\sPASSED\sin\s(\d*\.?\d*)\smsec/,
+				higherbetter: true,
+				units: "msec"
+			},
+			"avrora":{
+				// DaCapo 9.12-MR1 avrora PASSED in 3705 msec
+				regex: /DaCapo.*avrora\sPASSED\sin\s(\d*\.?\d*)\smsec/,
+				higherbetter: true,
+				units: "msec"
+			},
+			"fop":{
+				//  DaCapo 9.12-MR1 fop PASSED in 13864 msec
+				regex: /DaCapo.*fop\sPASSED\sin\s(\d*\.?\d*)\smsec/,
+				higherbetter: true,
+				units: "msec"
+			},
+			"jython":{
+				//  DaCapo 9.12-MR1 jython PASSED in 13864 msec
+				regex: /DaCapo.*jython\sPASSED\sin\s(\d*\.?\d*)\smsec/,
+				higherbetter: true,
+				units: "msec"
+			},
+			"luindex":{
+				//  DaCapo 9.12-MR1 luindex PASSED in 1785 msec 
+				regex: /DaCapo.*luindex\sPASSED\sin\s(\d*\.?\d*)\smsec/,
+				higherbetter: true,
+				units: "msec"
+			},	
+			"pmd":{
+				//  DaCapo 9.12-MR1 pmd PASSED in 2721 msec 
+				regex: /DaCapo.*pmd\sPASSED\sin\s(\d*\.?\d*)\smsec/,
+				higherbetter: true,
+				units: "msec"
+			},
+			"sunflow":{
+				//  DaCapo 9.12-MR1 sunflow PASSED in 4831 msec
+				regex: /DaCapo.*sunflow\sPASSED\sin\s(\d*\.?\d*)\smsec/,
+				higherbetter: true,
+				units: "msec"
+			},
+			"xalan":{
+				//  DaCapo 9.12-MR1 xalan PASSED in 2630 msec 
+				regex: /DaCapo.*xalan\sPASSED\sin\s(\d*\.?\d*)\smsec/,
+				higherbetter: true,
+				units: "msec"
+			},
+		}
+	},
     ILOG_WODM: {
         metrics: {
             "Global Throughput":{
@@ -283,7 +348,7 @@ const BenchmarkMetricRegex = {
     },
     "pingperf-quarkus-baremetal_throughput": {
         outerRegex:/Running \d*? measures([\s\S\n]*)/, 
-        //execlude warmup runs from getting parsed
+        //exclude warmup runs from getting parsed
         metrics: {
             "Throughput": {
                 //Example: Requests/sec: 100522.45/

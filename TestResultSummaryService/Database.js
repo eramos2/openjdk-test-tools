@@ -5,16 +5,17 @@ const url = 'mongodb://' + credential + 'localhost:27017/exampleDb';
 
 let db;
 (async function () {
-    const dbConnect = await MongoClient.connect(url);
+    const dbConnect = await MongoClient.connect(url, { useUnifiedTopology: true });
     db = dbConnect.db("exampleDb");
     await db.createCollection('testResults');
     await db.createCollection('output');
     await db.createCollection('auditLogs');
+    await db.createCollection('user');
 })()
 
 class Database {
     populateDB(data) {
-        return this.col.insert(data);
+        return this.col.insertOne(data);
     }
 
     getData(query, fields = {}) {
@@ -38,7 +39,7 @@ class Database {
     }
 
     update(criteria, update, options = {}) {
-        return this.col.update(criteria, update, options);
+        return this.col.updateOne(criteria, update, options);
     }
 
     deleteMany(fields) {
@@ -176,10 +177,23 @@ class Database {
         if (level) buildNameRegex = `${buildNameRegex}${level}..*`;
         if (group) buildNameRegex = `${buildNameRegex}${group}_.*`;
         if (platform) buildNameRegex = `${buildNameRegex}${platform}.*`;
+
+        // remove .* at the end of buildNameRegex
+        buildNameRegex = buildNameRegex.replace(/\.\*$/, '');
+
+        // when calculate test average duration, exclude Personal builds
+        buildNameRegex = buildNameRegex + `(?:(?!_Personal).)*$`;
+
         const buildResultRegex = buildResult || 'SUCCESS|UNSTABLE';
 
-        matchQuery.buildName = { $regex: buildNameRegex };
+        matchQuery.buildName = { $regex: buildNameRegex, $options: 'i' };
         matchQuery.buildResult = { $regex: buildResultRegex };
+        matchQuery.hasChildren = false;
+        matchQuery.tests = {
+            "$exists": true, 
+            "$ne": null
+        };
+
         // the aggregate order is important. Please change with caution
         const aggregateQuery = [
             { $match: matchQuery },
@@ -251,6 +265,13 @@ class OutputDB extends Database {
     }
 }
 
+class ApplicationTestsDB extends Database {
+    constructor() {
+        super();
+        this.col = db.collection('ApplicationTests');
+    }
+}
+
 class BuildListDB extends Database {
     constructor() {
         super();
@@ -265,4 +286,11 @@ class AuditLogsDB extends Database {
     }
 }
 
-module.exports = { TestResultsDB, OutputDB, BuildListDB, AuditLogsDB, ObjectID };
+class UserDB extends Database {
+    constructor() {
+        super();
+        this.col = db.collection('user');
+    }
+}
+
+module.exports = { TestResultsDB, OutputDB, BuildListDB, ApplicationTestsDB, AuditLogsDB, UserDB, ObjectID };

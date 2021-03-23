@@ -1,5 +1,6 @@
 import React, { Component } from 'react';
-import { Button, Tooltip, Icon, Collapse, Checkbox, TreeSelect } from 'antd';
+import { QuestionCircleOutlined, WarningOutlined } from '@ant-design/icons';
+import { Button, Tooltip, Collapse, Checkbox, TreeSelect } from 'antd';
 import ReactTable from 'react-table'
 import './TabularView.css';
 import 'react-table/react-table.css'
@@ -9,6 +10,7 @@ import { getParams } from '../utils/query';
 import 'react-day-picker/lib/style.css';
 import tabularViewConfig from './TabularViewConfig';
 import { getBenchmarkMetricProps } from '../utils/perf';
+import { getInfoFromBuildName } from '../utils/Utils';
 // Pull property panel from Collapse, so you do not have to write Collapse.Panel each time
 const { Panel } = Collapse;
 // Pull property SHOW_PARENT from TreeSelect, so you do not have to write TreeSelect.SHOW_PARENT each time
@@ -32,7 +34,7 @@ const legendColumns = [{
     accessor: 'analysis'
     },
 ];
-	
+
 const legendRows = [{
     colorName: 'Green',
     color: '#2dc937',
@@ -103,7 +105,8 @@ export default class TabularView extends Component {
         await this.initializeJdk();
 
         await this.showData('test');
-        this.showData('baseline');
+        await this.showData('baseline');
+        await this.populateCompTable();
      }
     // Get all dropdown values from database
     async updateDropdown () {
@@ -258,9 +261,10 @@ export default class TabularView extends Component {
         this.setState({treeData: newArray});
     }
     // When Submit button clicked, update table and URL
-    handleSubmit(event) {
-        this.showData('test');
-        this.showData('baseline');
+    async handleSubmit(event) {
+        await this.showData('test');
+        await this.showData('baseline');
+        await this.populateCompTable();
         event.preventDefault();
         
         // Update URL with current state
@@ -391,7 +395,7 @@ export default class TabularView extends Component {
         if (relativeComparison === 100 || relativeComparison === 0 || relativeComparison === "N/A") {return;}
         else if (totalCI * 100 < (Math.abs(relativeComparison - 100) + 0.7)) {return;} 
         else {
-            return <Icon type="warning" />;
+            return <WarningOutlined />;
         }
     }
     // Two filters Benchmark and Color. Always call benchmark filter first. If color filter is the first filter, boolean ensures benchmark filter is called first instead
@@ -485,32 +489,33 @@ export default class TabularView extends Component {
         let found = false;
 
         data.forEach(function (testResultsObject) {
-            platform = testResultsObject.buildName
-            let aggregateIndex = 0;
-            for(; aggregateIndex < testResultsObject.aggregateInfo.length; aggregateIndex++) {
-                for (const metric in testResultsObject.aggregateInfo[aggregateIndex].metrics) {
-                    found = false;
-                    benchmarkNVM = testResultsObject.aggregateInfo[aggregateIndex].benchmarkName + ',' + testResultsObject.aggregateInfo[aggregateIndex].benchmarkVariant + "," + testResultsObject.aggregateInfo[aggregateIndex].metrics[metric].name;
+            const buildInfo = getInfoFromBuildName(testResultsObject.buildName);
+            if (buildInfo){
+                platform = buildInfo.platform;
+                for(let aggregateIndex = 0; aggregateIndex < testResultsObject.aggregateInfo.length; aggregateIndex++) {
+                    for (const metric in testResultsObject.aggregateInfo[aggregateIndex].metrics) {
+                        found = false;
+                        benchmarkNVM = testResultsObject.aggregateInfo[aggregateIndex].benchmarkName + ',' + testResultsObject.aggregateInfo[aggregateIndex].benchmarkVariant + "," + testResultsObject.aggregateInfo[aggregateIndex].metrics[metric].name;
     
-                    for (const currentDataObject in newArray) {
-                        // If benchmark already exists append to it
-                        if (newArray[currentDataObject].benchmarkNVM === benchmarkNVM) {
-                            found = true;
-                            newArray[currentDataObject].platformsSpecificData[platform] = this.handleEntry(aggregateIndex, testResultsObject, metric, type);
-                            break;
+                        for (const currentDataObject in newArray) {
+                            // If benchmark already exists append to it
+                            if (newArray[currentDataObject].benchmarkNVM === benchmarkNVM) {
+                                found = true;
+                                newArray[currentDataObject].platformsSpecificData[platform] = this.handleEntry(aggregateIndex, testResultsObject, metric, type);
+                                break;
+                            }
                         }
-                    }
-                   // Create a new entry if benchmark name does not exist
-                    if (!found) {
-                        dataObject = {};
-                        dataObject.platformsSpecificData = {};
-                        dataObject.benchmarkNVM = testResultsObject.aggregateInfo[aggregateIndex].benchmarkName + ',' + testResultsObject.aggregateInfo[aggregateIndex].benchmarkVariant + ',' + testResultsObject.aggregateInfo[aggregateIndex].metrics[metric].name;
-                        dataObject.platformsSpecificData[platform] = this.handleEntry(aggregateIndex, testResultsObject, metric, type);
-                        newArray.push(dataObject);	
+                    // Create a new entry if benchmark name does not exist
+                        if (!found) {
+                            dataObject = {};
+                            dataObject.platformsSpecificData = {};
+                            dataObject.benchmarkNVM = benchmarkNVM;
+                            dataObject.platformsSpecificData[platform] = this.handleEntry(aggregateIndex, testResultsObject, metric, type);
+                            newArray.push(dataObject);	
+                        }
                     }
                 }
             }
-            
         }.bind(this));
         if (type === 'test') {
             this.setState({testData:newArray});
@@ -536,7 +541,7 @@ export default class TabularView extends Component {
                 const metricPropsJSON = await getBenchmarkMetricProps(benchmark);
                 if(metricPropsJSON){
                     this.metricsProps[benchmark] = metricPropsJSON;
-                    metricProps = metricPropsJSON.metric;
+                    metricProps = metricPropsJSON[metric];
                 }
             } else {
                 metricProps = this.metricsProps[benchmark][metric];
@@ -599,6 +604,8 @@ export default class TabularView extends Component {
     }
     // Main function to fetch data from backend and call the function to populate the displayed table
     showData = async (type) => {
+        this.setState({platforms:[]});
+        this.setState({columns:[], originalColumns: []});
         let tabularData;
         if (type === 'test') {
             tabularData = await fetch( `/api/getTabularData?jdkVersion=${this.state.testJdkVersion}&jvmType=${this.state.testJvmType}&jdkDate=${this.state.testJdkDate}
@@ -612,10 +619,12 @@ export default class TabularView extends Component {
                 } );
         }
         const info = await tabularData.json();
-        const platformArray = [...new Set([...this.state.platforms,...(info.pop())])];
+        function getPlatform(platform) {
+            const inforFromBuildName = getInfoFromBuildName(platform);
+            return inforFromBuildName ? inforFromBuildName.platform : null;
+        }
+        const platformArray = [...new Set([...this.state.platforms,...(info.pop().map(getPlatform))])];
         this.setState({platforms:platformArray});
-
-        this.generateColumns(this.state.platforms);
     
         const platformFilter = [];
         for (let platform in this.state.platforms) {
@@ -623,8 +632,7 @@ export default class TabularView extends Component {
         }
         this.setState({platformFilter: platformFilter});
         this.populateTable(info, type);
-        
-        await this.populateCompTable();
+        this.generateColumns(this.state.platforms);
     }
 
     render() {
@@ -659,7 +667,7 @@ export default class TabularView extends Component {
                             keepFocus={false}
                         /> 
             <Tooltip placement="topRight" title="Table will contain latest results from all builds dated before the chosen date regardless of when the benchmark was run.">
-                <Icon type="question-circle" />
+                <QuestionCircleOutlined />
             </Tooltip></div>
             <div className="column"> 
                 <DayPickerInput
@@ -673,7 +681,7 @@ export default class TabularView extends Component {
                     keepFocus={false}
                 /> 
             <Tooltip placement="topRight" title="Table will contain latest results from all builds dated before the chosen date regardless of when the benchmark was run.">
-                <Icon type="question-circle" />
+                <QuestionCircleOutlined />
             </Tooltip></div>
         </div>
         <div className="row">
@@ -726,6 +734,7 @@ export default class TabularView extends Component {
             showPaginationBottom={false}
             showPageSizeOptions={false}
             minRows={0}
+            pageSize={this.state.consolidatedData.length}
         />
         <br/>
         <ReactTable

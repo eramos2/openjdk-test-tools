@@ -6,7 +6,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified! Configure in package.json\" && exit 1",
     "startFrontend": "nodemon frontend.js --configFile=./trssConf.json",
-    "startBackend": "nodemon backend.js --configFile=./trssConf.json",
+    "startBackend": "nodemon --max-old-space-size=4096 backend.js --configFile=./trssConf.json",
     "start": "npm-run-all --parallel startFrontend startBackend"
   },
   "repository": "",
@@ -19,6 +19,7 @@
   "license": "Apache License Version 2.0",
   "readmeFilename": "README.md",
   "dependencies": {
+    "bcryptjs": "^2.4.3",
     "bluebird": "^3.7.2",
     "body-parser": "^1.19.0",
     "compression": "^1.7.4",
@@ -27,10 +28,11 @@
     "express": "^4.17.1",
     "got": "^9.6.0",
     "jenkins-api": "^0.3.1",
+    "jsonwebtoken": "^8.5.1",
     "mathjs": "^5.10.3",
-    "mongodb": "^3.5.4",
+    "mongodb": "^3.6.4",
     "request": "^2.88.2",
-    "winston": "^2.4.4"
+    "winston": "^2.4.5"
   },
   "devDependencies": {
     "nodemon": "^1.19.4",

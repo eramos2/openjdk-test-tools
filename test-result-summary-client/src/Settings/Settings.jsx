@@ -1,5 +1,6 @@
 import React, { Component } from 'react';
-import { Button, Table, Input, Icon, Popconfirm, Dropdown, Menu, message } from 'antd';
+import { CheckOutlined, DownOutlined, EditOutlined } from '@ant-design/icons';
+import { Button, Table, Input, Popconfirm, Dropdown, Menu, message, Spin } from 'antd';
 import './settings.css';
 
 class EditableCell extends Component {
@@ -36,20 +37,12 @@ class EditableCell extends Component {
                                 onChange={this.handleChange}
                                 onPressEnter={this.check}
                             />
-                            <Icon
-                                type="check"
-                                className="editable-cell-icon-check"
-                                onClick={this.check}
-                            />
+                            <CheckOutlined className="editable-cell-icon-check" onClick={this.check} />
                         </div>
                         :
                         <div className="editable-cell-text-wrapper">
                             {value || ' '}
-                            <Icon
-                                type="edit"
-                                className="editable-cell-icon"
-                                onClick={this.edit}
-                            />
+                            <EditOutlined className="editable-cell-icon" onClick={this.edit} />
                         </div>
                 }
             </div>
@@ -58,7 +51,10 @@ class EditableCell extends Component {
 }
 
 export default class Settings extends Component {
-    state = { data: [] };
+    state = { 
+        data: [],
+        loading: false,
+     };
 
     async componentDidMount() {
         const response = await fetch( `/api/getBuildList`, {
@@ -88,16 +84,37 @@ export default class Settings extends Component {
         };
     }
 
-    onDelete = async ( key ) => {
+    onDelete = async ( record ) => {
         const { data } = this.state;
-        const target = data.find( item => item.key === key );
+        const target = data.find( item => item.key === record.key );
+
         if ( target && target._id ) {
-            const response = await fetch( `/api/deleteBuildListById?_id=${target._id}`, {
-                method: 'get'
-            } );
-            await response.json();
+            this.setState({ loading: true });
+            await this.deleteBuilds(record);
+            this.setState({ loading: false });
         }
-        this.setState( { data: data.filter( item => item.key !== key ) } );
+
+        this.setState( { data: data.filter( item => item.key !== record.key ) } );
+    }
+
+    deleteBuilds = async ( record ) => {
+        // delete URL from monitor list
+        const response = await fetch( `/api/deleteBuildListById?_id=${record._id}`, {
+            method: 'get'
+        } );
+        await response.json();
+
+         // delete build data from database
+        const fetchDeleteBuildData = await fetch(`/api/deleteBuildData?buildUrl=${record.buildUrl}`, {
+            method: 'get'
+        });
+        const deleteResponse = await fetchDeleteBuildData.json();
+        
+        if (fetchDeleteBuildData.status === 400) {
+            message.error(deleteResponse.message);
+        } else if (fetchDeleteBuildData.status === 200){
+            message.success(`${deleteResponse.length} builds are deleted`);
+        } 
     }
 
     handleAdd = () => {
@@ -105,7 +122,8 @@ export default class Settings extends Component {
         const newData = {
             key: data ? data.length : 0,
             buildUrl: "",
-            numBuildsToKeep: 10
+            numBuildsToKeep: 10,
+            monitoring: "Yes"
         };
         this.setState( {
             data: [...data, newData]
@@ -115,21 +133,28 @@ export default class Settings extends Component {
     handleSubmit = async () => {
         const { data } = this.state;
         if ( data && data.length > 0 ) {
+            let buildUrls = [];
             let invalidRow = null;
             for ( let i = 0; i < data.length; i++ ) {
                 invalidRow = i + 1;
                 if ( !data[i].buildUrl ) {
-                    message.info( `Please provide a Build URL at Row ${invalidRow} and click the check mark!` );
+                    message.error( `Please provide a Build URL at Row ${invalidRow} and click the check mark!` );
+                    return;
+                }
+                if (buildUrls.includes(data[i].buildUrl)) {
+                    const formerRow= buildUrls.indexOf(data[i].buildUrl) + 1;
+                    message.error( `Duplicate Build URL found at Row ${formerRow} and ${invalidRow}`);
                     return;
                 }
                 if ( !data[i].type ) {
-                    message.info( `Please choose a Build Type at Row ${invalidRow}!` );
+                    message.error( `Please choose a Build Type at Row ${invalidRow}!` );
                     return;
                 }
                 if ( !data[i].numBuildsToKeep || !parseInt( data[i].numBuildsToKeep ) || parseInt( data[i].numBuildsToKeep ) < 0 ) {
-                    message.info( `Invalid # of Builds To Keep at Row ${invalidRow}! ${data[i].numBuildsToKeep}` );
+                    message.error( `Invalid # of Builds To Keep at Row ${invalidRow}! ${data[i].numBuildsToKeep}` );
                     return;
                 }
+                buildUrls.push(data[i].buildUrl);
 
                 data[i].numBuildsToKeep = parseInt( data[i].numBuildsToKeep, 10 );
             }
@@ -166,6 +191,14 @@ export default class Settings extends Component {
         }
     }
 
+    handleMonitoringClick = ( record, e ) => {
+        const { data } = this.state;
+        if ( data && data.length > record.key ) {
+            data[record.key].monitoring = e.key;
+            this.setState( data );
+        }
+    }
+
     render() {
         const { data } = this.state;
         if ( data ) {
@@ -193,7 +226,7 @@ export default class Settings extends Component {
                     return (
                         <Dropdown overlay={menu}>
                             <Button style={{ marginLeft: 8 }}>
-                                {text ? text : "Type"} <Icon type="down" />
+                                {text ? text : "Type"} <DownOutlined />
                             </Button>
                         </Dropdown>
                     );
@@ -211,7 +244,25 @@ export default class Settings extends Component {
                     return (
                         <Dropdown overlay={menu}>
                             <Button style={{ marginLeft: 8 }}>
-                                {text ? text : "No"} <Icon type="down" />
+                                {text ? text : "No"} <DownOutlined />
+                            </Button>
+                        </Dropdown>
+                    );
+                }
+            },{
+                title: 'Monitoring',
+                dataIndex: 'monitoring',
+                render: ( text, record ) => {
+                    const menu = (
+                        <Menu onClick={this.handleMonitoringClick.bind( null, record )}>
+                            <Menu.Item key="No">No</Menu.Item>
+                            <Menu.Item key="Yes">Yes</Menu.Item>
+                        </Menu>
+                    );
+                    return (
+                        <Dropdown overlay={menu}>
+                            <Button style={{ marginLeft: 8 }}>
+                                {text ? text : "Yes"} <DownOutlined />
                             </Button>
                         </Dropdown>
                     );
@@ -235,7 +286,12 @@ export default class Settings extends Component {
                     return (
                         this.state.data.length > 0 ?
                             (
-                                <Popconfirm title="Sure to delete?" onConfirm={() => this.onDelete( record.key )}>
+                                <Popconfirm title="Delete it from view and Database?" 
+                                    okText="Delete"
+                                    cancelText="Cancel"
+                                    okButtonProps={{ "type": "default" }}
+                                    cancelButtonProps={{ "type": "primary" }}
+                                    onConfirm={() => this.onDelete( record )}>
                                     <Button>Delete</Button>
                                 </Popconfirm>
                             ) : null
@@ -245,18 +301,20 @@ export default class Settings extends Component {
 
             return (
                 <div>
-                    <Table
-                        bordered
-                        dataSource={data}
-                        columns={columns}
-                        title={() => <b>Build Monitoring List</b>}
-                        pagination={false}
-                    />
-                    <div align="right">
-                        <Button type="primary" onClick={this.handleAdd} >Add Row</Button>
-                        <div className="divider" />
-                        <Button type="primary" onClick={this.handleSubmit} >Submit</Button>
-                    </div>
+                    <Spin spinning={this.state.loading}>
+                        <Table
+                            bordered
+                            dataSource={data}
+                            columns={columns}
+                            title={() => <b>Build Monitoring List</b>}
+                            pagination={false}
+                        />
+                        <div align="right">
+                            <Button type="primary" onClick={this.handleAdd} >Add Row</Button>
+                            <div className="divider" />
+                            <Button type="primary" onClick={this.handleSubmit} >Submit</Button>
+                        </div>
+                    </Spin>
                 </div>
             );
         }
