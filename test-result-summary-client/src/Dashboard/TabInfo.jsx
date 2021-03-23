@@ -1,5 +1,6 @@
 import React, { Component } from 'react';
-import { Button, Dropdown, Menu, Icon, Select } from 'antd';
+import { DownOutlined } from '@ant-design/icons';
+import { Button, Dropdown, Menu, Select } from 'antd';
 import RGL, { WidthProvider } from "react-grid-layout";
 import * as Widgets from "./Widgets/";
 import WidgetWrapper from './WidgetWrapper';
@@ -301,7 +302,7 @@ export default class TabInfo extends Component {
                 <Button type="primary" onClick={this.onReset} >Reset</Button>
                 <Dropdown overlay={menu}>
                     <Button style={{ marginLeft: 8 }}>
-                        Add a widget <Icon type="down" />
+                        Add a widget <DownOutlined />
                     </Button>
                 </Dropdown>
                 {console.log("Select me ", selectLibertyBaselineRelease)}
