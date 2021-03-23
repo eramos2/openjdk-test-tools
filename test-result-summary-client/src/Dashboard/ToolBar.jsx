@@ -1,12 +1,13 @@
-import React, { Component } from 'react';
-import { Popover, Button, Icon, Select } from 'antd';
+import React, { Component, cloneElement, isValidElement } from 'react';
+import { CloseOutlined, SettingOutlined } from '@ant-design/icons';
+import { Popover, Button, Select } from 'antd';
 
 class Settings extends Component {
     render() {
         const { Setting, ...props } = this.props;
-
-        return <Popover content={<Setting {...props} />} trigger="click" placement="bottomLeft">
-            <Button size="small"><Icon type="setting" /></Button>
+        const SettingComponent = isValidElement(Setting) ? cloneElement(Setting, props) : <Setting {...props} />;
+        return <Popover content={SettingComponent} trigger="click" placement="bottomLeft">
+            <Button size="small"><SettingOutlined /></Button>
         </Popover>
     }
 }
@@ -44,7 +45,7 @@ export default class ToolBar extends Component {
                 ))}
             </Select>}
             {Setting && <Settings Setting={Setting} {...props} />}
-            <Button size="small" onClick={onRemove}><Icon type="close" /></Button>
+            <Button size="small" onClick={onRemove}><CloseOutlined /></Button>
         </div>
     }
 }
